@@ -123,9 +123,6 @@ Client B: [!] Incoming file from alice: report.pdf
 ---
 
 ## 👤 Author
-
-**Aditya Nanda** — B.Tech CSE @ IIT Guwahati  
-Built as a capstone project integrating OS, CN, and DSA knowledge.  
 Reach out: [LinkedIn](https://linkedin.com/in/aditya-nanda-8b0325252) • [Email](mailto:a.nanda@iitg.ac.in)
 
 ---
