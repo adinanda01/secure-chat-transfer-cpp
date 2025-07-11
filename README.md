@@ -88,9 +88,9 @@ Client B: /register bob pass456
 Client B: /login bob pass456
 Client B: [PM from alice]: Hello Bob!
 
-Client A: /sendfile bob report.pdf
-Client B: [!] Incoming file from alice: report.pdf
-         [+] File saved successfully: report.pdf
+Client A: /sendfile bob test.txt
+Client B: [!] Incoming file from alice: test.txt
+         [+] File saved successfully: test.txt
 ```
 
 ---
