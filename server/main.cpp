@@ -76,13 +76,13 @@ void handle_client(int client_socket)
             {
                 std::string username, password;
                 iss >> username >> password;
-                
+                std::string hashed = sha256(password);
                 if (username.empty() || password.empty()) {
                     send(client_socket, "ERROR: Username and password required\n", 38, 0);
                     continue;
                 }
                 
-                if (register_user(username, password))
+                if (register_user(username, hashed))
                 {
                     send(client_socket, "REGISTER_SUCCESS\n", 17, 0);
                 }
