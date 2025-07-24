@@ -129,6 +129,8 @@ void receive_messages(int sock)
     }
 }
 
+
+
 std::string sha256_bytes(const std::vector<char> &data)
 {
     unsigned char hash[SHA256_DIGEST_LENGTH];
