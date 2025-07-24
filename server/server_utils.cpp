@@ -3,6 +3,10 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <mutex>
+
+// Add this:
+std::mutex user_file_mutex;
 
 std::string sha256(const std::string &str) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -15,6 +19,7 @@ std::string sha256(const std::string &str) {
 }
 
 bool register_user(const std::string &username, const std::string &hashed_pass) {
+    std::lock_guard<std::mutex> lock(user_file_mutex);
     std::ifstream infile("server/users.db");
     std::string line;
     while (std::getline(infile, line)) {
@@ -29,6 +34,7 @@ bool register_user(const std::string &username, const std::string &hashed_pass) 
 }
 
 bool validate_user(const std::string &username, const std::string &hashed_pass) {
+    std::lock_guard<std::mutex> lock(user_file_mutex);
     std::ifstream infile("server/users.db");
     std::string line;
     while (std::getline(infile, line)) {
