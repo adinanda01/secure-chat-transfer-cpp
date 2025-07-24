@@ -72,11 +72,13 @@ void handle_client(int client_socket)
             std::string command;
             iss >> command;
 
+            // Command to register on to the server  -----------------------------------------------------
+
             if (command == "/register")
             {
                 std::string username, password;
                 iss >> username >> password;
-                std::string hashed = sha256(password);
+                std::string hashed = sha256(password); // ✅ HASH IT HERE
                 if (username.empty() || password.empty()) {
                     send(client_socket, "ERROR: Username and password required\n", 38, 0);
                     continue;
@@ -86,28 +88,35 @@ void handle_client(int client_socket)
                 {
                     send(client_socket, "REGISTER_SUCCESS\n", 17, 0);
                 }
+
+                // We can add like for couple of attempt of regesitering the same person > ALREADY REGISTERED
                 else
                 {
                     send(client_socket, "REGISTER_FAILED\n", 16, 0);
                 }
             }
+            
+
+            // Command to Login to the server -----------------------------------------------------
 
             else if (command == "/login")
             {
                 std::string username, password;
                 iss >> username >> password;
-                
+                std::string hashed = sha256(password);
                 if (username.empty() || password.empty()) {
                     send(client_socket, "ERROR: Username and password required\n", 38, 0);
                     continue;
                 }
                 
-                std::string hashed = sha256(password);
+                // Command to Validate User to the server -----------------------------------------------------
+
                 if (validate_user(username, hashed))
                 {
                     std::lock_guard<std::mutex> lock(user_map_mutex);
                     
-                    // Check if user is already logged in
+                    // Check if user is already logged in  -----------------------------------------------------
+
                     if (username_to_socket.find(username) != username_to_socket.end()) {
                         send(client_socket, "ERROR: User already logged in\n", 31, 0);
                         continue;
@@ -124,13 +133,18 @@ void handle_client(int client_socket)
                 }
             }
 
+            // Command to Msg -----------------------------------------------------
+
             else if (command == "/msg")
             {
+                // if the client has not logged in and !authenticated -----------------------------------------------------
+
                 if (!authenticated) {
                     send(client_socket, "ERROR: Please login first.\n", 28, 0);
                     continue;
                 }
 
+                // Read the correct command and message written  -----------------------------------------------------
                 size_t first_space = input.find(' ');
                 size_t second_space = input.find(' ', first_space + 1);
                 if (second_space == std::string::npos)
@@ -139,14 +153,20 @@ void handle_client(int client_socket)
                     continue;
                 }
 
+                
+
                 std::string target_user = input.substr(first_space + 1, second_space - first_space - 1);
                 std::string msg_body = input.substr(second_space + 1);
+
+                // IF MESSGAGE BODY IS EMPTY  -----------------------------------------------------
 
                 if (msg_body.empty())
                 {
                     send(client_socket, "ERROR: Message cannot be empty.\n", 33, 0);
                     continue;
                 }
+
+                // CHECK ACTIVE USERS AND FIND THE CORRECT DESTINATION CLIENT TO SEND MESSAGE  -----------------------------------------------------
 
                 std::lock_guard<std::mutex> lock(user_map_mutex);
                 if (username_to_socket.find(target_user) == username_to_socket.end())
@@ -161,6 +181,8 @@ void handle_client(int client_socket)
                     send(client_socket, "[PM sent]\n", 10, 0);
                 }
             }
+
+            // COMMAND TO SEND FILE -----------------------------------------------------
 
             else if (command == "/sendfile")
             {
@@ -204,6 +226,8 @@ void handle_client(int client_socket)
                         continue;
                     }
                 }
+                // NOTE THE SERVER CALCULATES THE FILE SIZE AND CHECK IT 
+                // IT DOES NOT STORES THE FILE HENCE WE DON'T REQUIRE THE STORAGE HERE AND WE ARE EFFICIENT IN STORAGE -----------------------------------------------------
 
                 size_t file_size = 0;
                 try {
@@ -241,6 +265,7 @@ void handle_client(int client_socket)
 
                 std::cout << "[DEBUG] File content received successfully (" << bytes_copied << " bytes)\n";
 
+                // FILE INTEGRITY CHECK USING SHA256 CHECKSUM -----------------------------------------------------
                 // Step 3: Read checksum
                 std::string checksum;
                 size_t checksum_newline_pos = recv_buffer.find('\n');
@@ -324,34 +349,35 @@ void handle_client(int client_socket)
 
 int main()
 {
+    
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
     std::vector<std::thread> client_threads;
 
-    // Creating socket file descriptor
+   // 1. Create socket -----------------------------------------------------
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    // Reuse address/port
+    // 2. Set socket options (like SO_REUSEADDR) -----------------------------------------------------
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
-    // Bind socket to the port
+    // 3. Bind the socket to an address and port -----------------------------------------------------
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
 
-    // Start listening
+    // 4. Listen for incoming connections -----------------------------------------------------
     if (listen(server_fd, MAX_CLIENTS) < 0)
     {
         perror("listen");
@@ -360,7 +386,7 @@ int main()
 
     std::cout << "[+] Server started on port " << PORT << std::endl;
 
-    // Accept clients
+    // 5. Accept and handle each connection -----------------------------------------------------
     while (true)
     {
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address,
@@ -370,7 +396,10 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        client_threads.emplace_back(std::thread(handle_client, new_socket));
+        // Resource Management -----------------------------------------
+        std::thread client_thread(handle_client, new_socket);
+        client_thread.detach();  //  Let it run independently
+
     }
 
     // Join threads before shutdown (not strictly needed now)
